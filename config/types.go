@@ -1,0 +1,37 @@
+package config
+
+// Defines how is an incoming message matched with a rule
+type Match struct {
+	Keywords []string `toml:"keywords"`
+	Pattern  string   `toml:"pattern"`
+}
+
+// The reply details
+type Reply struct {
+	Text         string `toml:"text"`
+	DelaySeconds int    `toml:"delay_seconds"`
+}
+
+type Rule struct {
+	Name string `toml:"name"`
+
+	// Target defines the user/chat this rule applies to.
+	// Supported formats:
+	//   "*"              - applies to all chats
+	//   "@user"          - applies to user by username
+	//   "123456789"      - applies to user by numeric ID
+	//   "-1001234567890" - applies to group chat
+	Target string `toml:"target"`
+
+	Match Match `toml:"match"`
+	Reply Reply `toml:"reply"`
+}
+
+type Config struct {
+	Rules []Rule `toml:"rules"`
+}
+
+type Secrets struct {
+	APIID   int    `toml:"api_id"`
+	APIHash string `toml:"api_hash"`
+}
