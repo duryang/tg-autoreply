@@ -1,9 +1,12 @@
 package config
 
+import "regexp"
+
 // Defines how is an incoming message matched with a rule
 type Match struct {
-	Keywords []string `toml:"keywords"`
-	Pattern  string   `toml:"pattern"`
+	Keywords        []string `toml:"keywords"`
+	Pattern         string   `toml:"pattern"`
+	CompiledPattern *regexp.Regexp
 }
 
 // The reply details
@@ -32,6 +35,7 @@ type Config struct {
 }
 
 type Secrets struct {
-	APIID   int    `toml:"api_id"`
-	APIHash string `toml:"api_hash"`
+	APIID       int    `toml:"api_id"`
+	APIHash     string `toml:"api_hash"`
+	PhoneNumber string `toml:"phone_number"`
 }

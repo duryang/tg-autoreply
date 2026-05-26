@@ -1,6 +1,11 @@
 package config
 
-import "github.com/BurntSushi/toml"
+import (
+	"fmt"
+	"regexp"
+
+	"github.com/BurntSushi/toml"
+)
 
 func LoadConfig(path string) (*Config, error) {
 	var config Config
@@ -8,6 +13,20 @@ func LoadConfig(path string) (*Config, error) {
 	if _, err := toml.DecodeFile(path, &config); err != nil {
 		return nil, err
 	}
+
+	for i, rule := range config.Rules {
+		if rule.Match.Pattern != "" && rule.Match.Pattern != "*" {
+			re, err := regexp.Compile(rule.Match.Pattern)
+			if err != nil {
+				fmt.Printf("warn: invalid pattern %q in rule %q: %v\n", rule.Match.Pattern, rule.Name, err)
+				continue
+			}
+
+			config.Rules[i].Match.CompiledPattern = re
+		}
+	}
+
+	// TODO validate the rules
 
 	return &config, nil
 }
