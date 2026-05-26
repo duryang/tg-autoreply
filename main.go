@@ -32,18 +32,22 @@ func main() {
 	client.OnMessage(func(msg tgclient.Message) {
 		fmt.Printf("New message from %d (@%s): %s\n", msg.SenderID, msg.SenderUsername, msg.Text)
 		if reply := matching.MatchRule(cfg, msg); reply != nil {
-			go func() {
-				if reply.DelaySeconds > 0 {
-					time.Sleep(time.Duration(reply.DelaySeconds) * time.Second)
-				}
-				if err := client.Reply(ctx, msg, reply.Text); err != nil {
-					fmt.Println("failed to send reply:", err)
-				}
-			}()
+			scheduleReply(ctx, client, msg, reply)
 		}
 	})
 
 	if err := client.Start(ctx); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func scheduleReply(ctx context.Context, client *tgclient.Client, msg tgclient.Message, reply *config.Reply) {
+	go func() {
+		if reply.DelaySeconds > 0 {
+			time.Sleep(time.Duration(reply.DelaySeconds) * time.Second)
+		}
+		if err := client.Reply(ctx, msg, reply.Text); err != nil {
+			fmt.Println("failed to send reply:", err)
+		}
+	}()
 }
