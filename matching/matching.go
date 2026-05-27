@@ -42,12 +42,24 @@ func matchTarget(rule config.Rule, msg tgclient.Message) bool {
 }
 
 func matchText(rule config.Rule, text string) bool {
-	if len(rule.Match.Keywords) > 0 && containsAllKeywords(rule.Match.Keywords, text) {
+	if rule.Match.KeywordMatch != nil && matchKeywords(*rule.Match.KeywordMatch, text) {
 		return true
 	} else if rule.Match.Pattern == "*" {
 		return true
 	} else if rule.Match.CompiledPattern != nil && rule.Match.CompiledPattern.MatchString(text) {
 		return true
+	}
+
+	return false
+}
+
+func matchKeywords(keywordMatch config.KeywordMatch, text string) bool {
+	switch keywordMatch.Type {
+	// TODO set the default value to all when loading config, so won't have to check it here
+	case "", "all":
+		return containsAllKeywords(keywordMatch.Keywords, text)
+	case "any":
+		return containsAnyKeyword(keywordMatch.Keywords, text)
 	}
 
 	return false
@@ -61,4 +73,14 @@ func containsAllKeywords(keywords []string, text string) bool {
 	}
 
 	return true
+}
+
+func containsAnyKeyword(keywords []string, text string) bool {
+	for _, keyword := range keywords {
+		if strings.Contains(text, keyword) {
+			return true
+		}
+	}
+
+	return false
 }

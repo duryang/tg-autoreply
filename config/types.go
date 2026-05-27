@@ -4,9 +4,24 @@ import "regexp"
 
 // Defines how is an incoming message matched with a rule
 type Match struct {
-	Keywords        []string `toml:"keywords"`
-	Pattern         string   `toml:"pattern"`
+	KeywordMatch    *KeywordMatch `toml:"keyword_match"`
+	Pattern         string        `toml:"pattern"`
 	CompiledPattern *regexp.Regexp
+}
+
+const (
+	KeywordMatchAll = "all"
+	KeywordMatchAny = "any"
+)
+
+type KeywordMatch struct {
+	// Defines how the keywords are matched with the message
+	// Supported types:
+	//	 "all" - all keywords must be present (default)
+	//   "any" - any of the keywords must be present
+	Type string `toml:"type"`
+
+	Keywords []string `toml:"keywords"`
 }
 
 // The reply details
