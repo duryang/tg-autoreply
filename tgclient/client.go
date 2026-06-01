@@ -16,6 +16,7 @@ type Message struct {
 	SenderID       int64
 	ChatID         int64
 	SenderUsername string
+	IsGroup        bool
 }
 
 type MessageHandler func(Message)
@@ -71,7 +72,7 @@ func (client *Client) Start(ctx context.Context) error {
 
 	client.internal = telegram.NewClient(client.apiID, client.apiHash, telegram.Options{
 		SessionStorage: sessionStorage,
-		UpdateHandler: updatesManager,
+		UpdateHandler:  updatesManager,
 	})
 
 	// Auth flow — prompts for phone number and OTP code on first run
@@ -107,6 +108,7 @@ func (client *Client) Start(ctx context.Context) error {
 func extractMsgDetails(msg *tg.Message, entities *tg.Entities) Message {
 	var senderID, chatID int64
 	var senderUsername string
+	var isGroup bool
 
 	switch peer := msg.GetPeerID().(type) {
 	case *tg.PeerUser:
@@ -119,8 +121,10 @@ func extractMsgDetails(msg *tg.Message, entities *tg.Entities) Message {
 		if fromPeer, ok := msg.FromID.(*tg.PeerUser); ok {
 			senderID = fromPeer.UserID
 		}
+		isGroup = true
 	}
 
+	// this is only working for direct message
 	if user, ok := entities.Users[senderID]; ok {
 		senderUsername = user.Username
 	}
@@ -130,16 +134,26 @@ func extractMsgDetails(msg *tg.Message, entities *tg.Entities) Message {
 		SenderID:       senderID,
 		ChatID:         chatID,
 		SenderUsername: senderUsername,
+		IsGroup:        isGroup,
 	}
 }
 
+// Sends a reply in the same chat that the incoming message was from
 func (client *Client) Reply(ctx context.Context, msg Message, text string) error {
 	sender := message.NewSender(client.internal.API())
 
-	// target := sender.Resolve(fmt.Sprintf("%d", msg.ChatID))
-	target := sender.To(&tg.InputPeerUser{
+	var peer tg.InputPeerClass
+	if msg.IsGroup {
+		peer = &tg.InputPeerChat{
+			ChatID: msg.ChatID,
+		}
+	} else {
+		peer = &tg.InputPeerUser{
         UserID: msg.ChatID,
-    })
+		}
+	}
+
+	target := sender.To(peer)
 
 	_, err := target.Text(ctx, text)
 	return err
