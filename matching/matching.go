@@ -11,7 +11,7 @@ import (
 func MatchRule(ruleConfig *config.Config, msg tgclient.Message) *config.Reply {
 	rules := ruleConfig.Rules
 	for _, rule := range rules {
-		if matchTarget(rule, msg) && matchText(rule, msg.Text) {
+		if matchTarget(rule.Target, msg) && matchText(rule, msg.Text) {
 			return &rule.Reply
 		}
 	}
@@ -19,26 +19,59 @@ func MatchRule(ruleConfig *config.Config, msg tgclient.Message) *config.Reply {
 	return nil
 }
 
-func matchTarget(rule config.Rule, msg tgclient.Message) bool {
-	target := rule.Target
-	if target == "*" {
-		return true
-	} else if strings.HasPrefix(target, "@") && strings.TrimPrefix(target, "@") == msg.SenderUsername {
-		return true
+func matchTarget(target config.Target, msg tgclient.Message) bool {
+
+	if target.Group != nil {
+		// group chat
+		if !matchGroup(*target.Group, msg) {
+			return false
+		}
+		if target.User != nil {
+			// specific user in group chat
+			return matchUser(*target.User, msg)
+		} else {
+			// any user in group chat
+			return true
+		}
+	} else if target.User != nil {
+		// direct chat with a user
+		return msg.SenderID == msg.ChatID && matchUser(*target.User, msg)
 	}
 
-	id, err := strconv.ParseInt(target, 10, 64)
+	// both user and group shouldn't come empty
+	return false
+}
+
+// Checks if the message was received in the provided group ID.
+func matchGroup(group string, msg tgclient.Message) bool {
+	groupID, err := strconv.ParseInt(group, 10, 64)
 	if err != nil {
 		return false
 	}
 
-	if id < 0 && id == msg.ChatID {
-		return true
-	} else if id > 0 && id == msg.SenderID {
+	return groupID == msg.ChatID
+}
+
+// Checks if the message was received from the provided user matcher.
+// "*" means always matches.
+// If the matcher is a username, compares with the message's sender username.
+// If the matcher is a userID, compares with the message's sender ID.
+// This method doesn't care if it is a direct message or group chat message.
+func matchUser(user string, msg tgclient.Message) bool {
+	if user == "*" {
 		return true
 	}
 
-	return false
+	if strings.HasPrefix(user, "@") && strings.TrimPrefix(user, "@") == msg.SenderUsername {
+		return true
+	}
+
+	userID, err := strconv.ParseInt(user, 10, 64)
+	if err != nil {
+		return false
+	}
+
+	return userID == msg.SenderID
 }
 
 func matchText(rule config.Rule, text string) bool {

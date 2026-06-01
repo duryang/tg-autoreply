@@ -30,7 +30,7 @@ func main() {
 	defer cancel()
 
 	client.OnMessage(func(msg tgclient.Message) {
-		fmt.Printf("New message from %d (@%s): %s\n", msg.SenderID, msg.SenderUsername, msg.Text)
+		fmt.Printf("New message: %+v\n", msg)
 		if reply := matching.MatchRule(cfg, msg); reply != nil {
 			scheduleReply(ctx, client, msg, reply)
 		}
