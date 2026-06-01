@@ -138,7 +138,7 @@ func extractMsgDetails(msg *tg.Message, entities *tg.Entities) Message {
 	}
 }
 
-// Sends a reply in the same chat that the incoming message was from
+// Sends a reply in the same chat that incoming message was from
 func (client *Client) Reply(ctx context.Context, msg Message, text string) error {
 	sender := message.NewSender(client.internal.API())
 
@@ -149,7 +149,7 @@ func (client *Client) Reply(ctx context.Context, msg Message, text string) error
 		}
 	} else {
 		peer = &tg.InputPeerUser{
-        UserID: msg.ChatID,
+			UserID: msg.ChatID,
 		}
 	}
 

@@ -32,7 +32,7 @@ func main() {
 	client.OnMessage(func(msg tgclient.Message) {
 		fmt.Printf("New message: %+v\n", msg)
 		if reply := matching.MatchRule(cfg, msg); reply != nil {
-			scheduleReply(ctx, client, msg, reply)
+			scheduleReply(ctx, client, msg, *reply)
 		}
 	})
 
@@ -41,7 +41,7 @@ func main() {
 	}
 }
 
-func scheduleReply(ctx context.Context, client *tgclient.Client, msg tgclient.Message, reply *config.Reply) {
+func scheduleReply(ctx context.Context, client *tgclient.Client, msg tgclient.Message, reply config.Reply) {
 	go func() {
 		if reply.DelaySeconds > 0 {
 			time.Sleep(time.Duration(reply.DelaySeconds) * time.Second)
