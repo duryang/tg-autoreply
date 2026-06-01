@@ -21,7 +21,8 @@ type KeywordMatch struct {
 	//   "any" - any of the keywords must be present
 	Type string `toml:"type"`
 
-	Keywords []string `toml:"keywords"`
+	Keywords      []string `toml:"keywords"`
+	CaseSensitive bool     `toml:"case_sensitive"`
 }
 
 // Defines the user/chat this rule applies to.

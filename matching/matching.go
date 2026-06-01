@@ -86,7 +86,15 @@ func matchText(rule config.Rule, text string) bool {
 	return false
 }
 
+// Checks if the received message text matches with the keywords.
+// By default the keyword match is case-insensitive.
+// Assuming that if the keyword match is case-insensitive, all its keywords are already lowercase.
 func matchKeywords(keywordMatch config.KeywordMatch, text string) bool {
+
+	if !keywordMatch.CaseSensitive {
+		text = strings.ToLower(text)
+	}
+
 	switch keywordMatch.Type {
 	// TODO set the default value to all when loading config, so won't have to check it here
 	case "", "all":

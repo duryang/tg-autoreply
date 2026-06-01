@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -23,6 +24,13 @@ func LoadConfig(path string) (*Config, error) {
 			}
 
 			config.Rules[i].Match.CompiledPattern = re
+		}
+
+		// if the keyword match is case-insensitive, make the keywords lowercase
+		if rule.Match.KeywordMatch != nil && !rule.Match.KeywordMatch.CaseSensitive {
+			for j, k := range rule.Match.KeywordMatch.Keywords {
+				config.Rules[i].Match.KeywordMatch.Keywords[j] = strings.ToLower(k)
+			}
 		}
 	}
 
