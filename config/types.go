@@ -1,6 +1,9 @@
 package config
 
-import "regexp"
+import (
+	"regexp"
+	"sync"
+)
 
 // Defines how is an incoming message matched with a rule
 type Match struct {
@@ -46,14 +49,16 @@ type Reply struct {
 }
 
 type Rule struct {
-	Name   string `toml:"name"`
-	Target Target `toml:"target"`
-	Match  Match  `toml:"match"`
-	Reply  Reply  `toml:"reply"`
+	Name    string `toml:"name"`
+	Target  Target `toml:"target"`
+	Match   Match  `toml:"match"`
+	Reply   Reply  `toml:"reply"`
+	OneTime bool   `toml:"one_time"`
 }
 
 type Config struct {
 	Rules []Rule `toml:"rules"`
+	Mu    sync.Mutex
 }
 
 type Secrets struct {

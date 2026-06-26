@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -9,9 +10,17 @@ import (
 )
 
 func MatchRule(ruleConfig *config.Config, msg tgclient.Message) *config.Reply {
-	rules := ruleConfig.Rules
-	for _, rule := range rules {
+	ruleConfig.Mu.Lock()
+	defer ruleConfig.Mu.Unlock()
+
+	for i, rule := range ruleConfig.Rules {
 		if matchTarget(rule.Target, msg) && matchText(rule, msg.Text) {
+			if rule.OneTime {
+				// Remove the selected one-time rule from the config, so it won't be matched again.
+				ruleConfig.Rules = append(ruleConfig.Rules[:i], ruleConfig.Rules[i+1:]...)
+
+				fmt.Printf("One-time rule %q matched and removed from config\n", rule.Name)
+			}
 			return &rule.Reply
 		}
 	}
