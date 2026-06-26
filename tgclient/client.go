@@ -16,7 +16,7 @@ type Message struct {
 	SenderID       int64
 	ChatID         int64
 	SenderUsername string
-	IsGroup        bool
+	InputPeer      tg.InputPeerClass
 }
 
 type MessageHandler func(Message)
@@ -46,20 +46,23 @@ func (client *Client) Start(ctx context.Context) error {
 
 	dispatcher.OnNewMessage(func(ctx context.Context, entities tg.Entities, update *tg.UpdateNewMessage) error {
 		msg, ok := update.Message.(*tg.Message)
-
-		// skip outgoing messages
 		if !ok || msg.Out {
 			return nil
 		}
 
-		// // TODO: revert
-		// if !ok {
-		// 	return nil
-		// }
+		client.handleIncomingMessage(entities, msg)
+		return nil
+	})
 
-		if client.handler != nil {
-			client.handler(extractMsgDetails(msg, &entities))
+	dispatcher.OnNewChannelMessage(func(ctx context.Context, entities tg.Entities, update *tg.UpdateNewChannelMessage) error {
+		msg, ok := update.Message.(*tg.Message)
+
+		// skip post messages in channels, we don't want to reply to them
+		if !ok || msg.Out || msg.Post {
+			return nil
 		}
+
+		client.handleIncomingMessage(entities, msg)
 		return nil
 	})
 
@@ -105,23 +108,46 @@ func (client *Client) Start(ctx context.Context) error {
 	})
 }
 
+func (client *Client) handleIncomingMessage(entities tg.Entities, msg *tg.Message) {
+	if client.handler != nil {
+		client.handler(extractMsgDetails(msg, &entities))
+	}
+}
+
 func extractMsgDetails(msg *tg.Message, entities *tg.Entities) Message {
 	var senderID, chatID int64
 	var senderUsername string
-	var isGroup bool
+	var inputPeer tg.InputPeerClass
 
 	switch peer := msg.GetPeerID().(type) {
 	case *tg.PeerUser:
+		fmt.Println("Direct message")
+
 		// private chat - sender and chat IDs are the same
 		senderID = peer.UserID
 		chatID = peer.UserID
+		inputPeer = &tg.InputPeerUser{UserID: chatID}
 	case *tg.PeerChat:
+		fmt.Println("Group messsage")
+
 		// group chat - get chat ID from peer, sender from FromID
 		chatID = peer.ChatID
 		if fromPeer, ok := msg.FromID.(*tg.PeerUser); ok {
 			senderID = fromPeer.UserID
 		}
-		isGroup = true
+		inputPeer = &tg.InputPeerChat{ChatID: chatID}
+	case *tg.PeerChannel:
+		fmt.Println("Channel message")
+
+		// channel - get chat ID from peer, sender from FromID
+		chatID = peer.ChannelID
+		if fromPeer, ok := msg.FromID.(*tg.PeerUser); ok {
+			senderID = fromPeer.UserID
+		}
+		inputPeer = &tg.InputPeerChannel{
+			ChannelID:  chatID,
+			AccessHash: entities.Channels[chatID].AccessHash,
+		}
 	}
 
 	// this is only working for direct message
@@ -134,26 +160,15 @@ func extractMsgDetails(msg *tg.Message, entities *tg.Entities) Message {
 		SenderID:       senderID,
 		ChatID:         chatID,
 		SenderUsername: senderUsername,
-		IsGroup:        isGroup,
+		InputPeer:      inputPeer,
 	}
 }
 
 // Sends a reply in the same chat that incoming message was from
-func (client *Client) Reply(ctx context.Context, msg Message, text string) error {
+func (client *Client) Reply(ctx context.Context, inputPeer tg.InputPeerClass, text string) error {
 	sender := message.NewSender(client.internal.API())
 
-	var peer tg.InputPeerClass
-	if msg.IsGroup {
-		peer = &tg.InputPeerChat{
-			ChatID: msg.ChatID,
-		}
-	} else {
-		peer = &tg.InputPeerUser{
-			UserID: msg.ChatID,
-		}
-	}
-
-	target := sender.To(peer)
+	target := sender.To(inputPeer)
 
 	_, err := target.Text(ctx, text)
 	return err

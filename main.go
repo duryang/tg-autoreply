@@ -30,7 +30,7 @@ func main() {
 	defer cancel()
 
 	client.OnMessage(func(msg tgclient.Message) {
-		fmt.Printf("New message: %+v\n", msg)
+		fmt.Printf("New incoming message: text=%q senderID=%d chatID=%d senderUsername=%q\n", msg.Text, msg.SenderID, msg.ChatID, msg.SenderUsername)
 		if reply := matching.MatchRule(cfg, msg); reply != nil {
 			scheduleReply(ctx, client, msg, *reply)
 		}
@@ -46,7 +46,7 @@ func scheduleReply(ctx context.Context, client *tgclient.Client, msg tgclient.Me
 		if reply.DelaySeconds > 0 {
 			time.Sleep(time.Duration(reply.DelaySeconds) * time.Second)
 		}
-		if err := client.Reply(ctx, msg, reply.Text); err != nil {
+		if err := client.Reply(ctx, msg.InputPeer, reply.Text); err != nil {
 			fmt.Println("failed to send reply:", err)
 		}
 	}()
